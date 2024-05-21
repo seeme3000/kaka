@@ -2,30 +2,31 @@ var CHINESE_ARR = ['月', '丁', '户', '下', '上', '西', '水', '金', '木'
 var CHAR_ARR = ['A', 'B', 'C', 'D', 'K', 'E', 'F', 'G', 'H', 'J', 'K', 'M', 'N', 'R', 'V', 'W', 'Y']
 var NUM_ARR = ['42', '37', '34', '12', '23', '47', '55', '27']
 const KEY_CODE_ARR = [39, 40, 37, 38];
-const maxFontSize = 200;
-const minFontSize = 12;
+const maxFontSize = 200; // 最大字号
+const minFontSize = 12; // 最小字号
 let currentDirection;
 let keyInterval;
-let gameStatus = 0;
+let gameStatus = 0; // 状态，1为启动
 let operateObj = {
-    errorCount: 0,
-    successCount: 0,
+    errorCount: 0, // 错误次数
+    successCount: 0, // 成功次数
     currentFontSize: maxFontSize,
-    step: 1,
-    textChange: "DOWN",
-    stepRoundCount: 0,
+    step: 1, // 步数
+    textChange: "DOWN", // 文字大小改变的指令， DOWN 为减小，UP 为加大
+    stepRoundCount: 0, // 第几轮
     allRoundCount: -1,
 };
 let area = {
-    clearness: {begin: 0, end: 0},
-    vague: {begin: 0, end: 0},
-    blind: {begin: 0, end: 0}
+    clearness: {begin: 0, end: 0}, // 清晰区？
+    vague: {begin: 0, end: 0}, // 模糊区？
+    blind: {begin: 0, end: 0} // 无法看的区域？
 }
 let globalTimer;
 let seconds = 0;
 let minutes = 0;
 $(function () {
     $('.star-btn').click(function () {
+        // 点击开始按钮
         gameStatus = 1;
         gotoStep(1);
         changeText();
@@ -36,23 +37,30 @@ $(function () {
         $('.finish-btn').show();
     });
     $('.suspend-btn').click(function () {
+        // 暂停
         gamePause();
     });
 
     $('.restore-btn').click(function () {
+        // 继续
         gameRestore();
     });
 
     $('.finish-btn').click(function () {
+        // 结束
         gameOver();
     });
+
+    // 监听按键
     $(document).keydown(function (e) {
         if (KEY_CODE_ARR.includes(e.which) && gameStatus === 1) {
+            // 如果按键方向正确
             if (KEY_CODE_ARR.indexOf(e.which) + 1 === currentDirection) {
-                operateObj.successCount += 1;
-                settlement();
-                resetOperateErrorCount();
+                operateObj.successCount += 1; // 正确次数加1
+                settlement(); // 计划下一步该干什么
+                resetOperateErrorCount(); // 重置错误次数
             } else {
+                // 答案错误
                 keyError();
             }
             if (gameStatus === 1) {
@@ -72,16 +80,19 @@ $(function () {
     });
 })
 
+// 开启计时器
 function startGlobalTimer() {
     globalTimer = setInterval(updateTimer, 1000);
 }
 
+// 停止计时器
 function stopGlobalTimer() {
     if (globalTimer) {
         clearInterval(globalTimer);
     }
 }
 
+// 计时器显示
 function updateTimer() {
     seconds++;
     if (seconds >= 60) {
@@ -96,25 +107,27 @@ function updateTimer() {
     $('.time').empty().append(displayMinutes + "：" + displaySeconds);
 }
 
+// 答案错误的处理
 function keyError() {
     operateObj.errorCount += 1;
     settlement();
     resetOperateSuccessCount();
 }
 
+// 设置下次出现文字的时间间隔
 function resetKeyInterval() {
     stopKeyInterval();
-    let timeout = 3000;
+    let timeout = 3000; // 默认3秒
     switch (operateObj.step) {
         case 1:
-            timeout = 3000;
+            timeout = 3000; // 如果是第一步，间隔 3 秒
             break
         case 2:
         case 3:
-            timeout = 2000;
+            timeout = 2000; // 如果是第二步，第三步，间隔 2 秒
             break
         case 4:
-            timeout = 4000;
+            timeout = 4000; // 如果是第四步，间隔 4 秒
             break
         default:
     }
@@ -130,6 +143,7 @@ function stopKeyInterval() {
     }
 }
 
+// 根据步骤，决定如何显示
 function settlement() {
     let nextStep = false;
     switch (operateObj.step) {
@@ -147,25 +161,29 @@ function settlement() {
             break
         default:
     }
+    // 如果需要进入下一步，就改变字体大小
     if (!nextStep) {
         nextFontSize();
     }
 }
 
+// 第一步逻辑
 function settlementStep1() {
     let doNext = false;
-    if (operateObj.currentFontSize < minFontSize) {
-        area.clearness.begin = maxFontSize - ((maxFontSize - minFontSize) / 2);
-        area.clearness.end = maxFontSize;
-        area.vague.begin = minFontSize;
-        area.vague.end = area.clearness.begin;
-        area.vague.end = minFontSize;
-        doNext = true;
+    if (operateObj.currentFontSize < minFontSize) {  // 如果当前字号小余最小字号
+        // clearness 清楚状态
+        area.clearness.begin = maxFontSize - ((maxFontSize - minFontSize) / 2); // 设置开始字号为：最小和最大字号的中间值
+        area.clearness.end = maxFontSize; // 设置结束字号为：最大字号
+        // vague 模糊状态
+        area.vague.begin = minFontSize; // 设置开始字号为：最小字号
+        area.vague.end = area.clearness.begin; // 设置结束字号为：清楚状态的开始字号（这行代码不起作用）
+        area.vague.end = minFontSize; // 设置结束字号为：最小字号
+        doNext = true; // 标记进入下一步
     }
 
 
-    if (operateObj.errorCount >= 3) {
-        if (area.clearness.end === 0) {
+    if (operateObj.errorCount >= 3) { // 如果连续出错 3 次
+        if (area.clearness.end === 0) { 
             area.clearness.begin = maxFontSize - ((maxFontSize - operateObj.currentFontSize) / 2);
             area.clearness.end = maxFontSize;
         }
@@ -185,20 +203,21 @@ function settlementStep1() {
     return doNext;
 }
 
+// 第二步逻辑
 function settlementStep2() {
     let doNext = false;
     if (isFullStepRound()) {
         doNext = true;
     } else {
-        if ((operateObj.successCount >= 50 && operateObj.textChange === 'UP')
-            || (operateObj.errorCount >= 3 && operateObj.textChange === 'DOWN')
-            || (operateObj.currentFontSize >= 200 && operateObj.textChange === 'UP')
-            || (operateObj.currentFontSize <= area.clearness.begin && operateObj.textChange === 'DOWN')
+        if ((operateObj.successCount >= 50 && operateObj.textChange === 'UP') // 如果成功次数 >= 50 次，并且是在增大字号
+            || (operateObj.errorCount >= 3 && operateObj.textChange === 'DOWN') // 或者，错误次数 >= 3 次，并且是在减小字号
+            || (operateObj.currentFontSize >= 200 && operateObj.textChange === 'UP') // 或者，当前字号 >= 200 并且是在增大字号
+            || (operateObj.currentFontSize <= area.clearness.begin && operateObj.textChange === 'DOWN') // 或者，当前字号 <= clearness 的开始字号，并且是在减小字号
         ) {
-            textChange();
-            operateObj.stepRoundCount += 0.5;
+            textChange(); // 改变字号变换的方向
+            operateObj.stepRoundCount += 0.5; // 步骤数加 0.5 
             resetOperateSuccessAndErrorCount();
-            if (isFullStepRound()) {
+            if (isFullStepRound()) { // 如果完成了完整步骤，进入下一步
                 doNext = true;
             }
         }
@@ -209,17 +228,18 @@ function settlementStep2() {
     return doNext;
 }
 
+// 第三步逻辑
 function settlementStep3() {
     let doNext = false;
     if (isFullStepRound()) {
         doNext = true;
     } else {
-        if ((operateObj.successCount >= 40 && operateObj.textChange === 'UP')
-            || (operateObj.errorCount >= 3 && operateObj.textChange === 'DOWN')
-            || (operateObj.currentFontSize >= 200 && operateObj.textChange === 'UP')
-            || (operateObj.currentFontSize <= area.vague.begin && operateObj.textChange === 'DOWN')
+        if ((operateObj.successCount >= 40 && operateObj.textChange === 'UP') // 如果成功次数 >= 40 次，并且是在增大字号
+            || (operateObj.errorCount >= 3 && operateObj.textChange === 'DOWN') // 或者，错误次数 >= 3 次，并且是在减小字号
+            || (operateObj.currentFontSize >= 200 && operateObj.textChange === 'UP') // 或者，当前字号 >= 200，并且在增大字号
+            || (operateObj.currentFontSize <= area.vague.begin && operateObj.textChange === 'DOWN') // 或者，当前字号 <= vague 的开始字号，并且是在减小字号
         ) {
-            textChange();
+            textChange(); // 改变字号变换方向
             operateObj.stepRoundCount += 0.5;
             resetOperateSuccessAndErrorCount();
             if (isFullStepRound()) {
@@ -233,6 +253,7 @@ function settlementStep3() {
     return doNext;
 }
 
+// 第四步逻辑
 function settlementStep4() {
     let doNext = false;
     if (isFullStepRound()) {
@@ -257,27 +278,29 @@ function settlementStep4() {
     return doNext;
 }
 
+// 进入指定步骤
 function gotoStep(step) {
-    operateObj.step = step;
+    operateObj.step = step; // 改变当前步骤
     switch (step) {
         case 1:
-            changeText(200);
+            changeText(200); // 如果是第一步，改变文字 200 
             break
         case 2:
-            operateObj.allRoundCount += 1;
+            operateObj.allRoundCount += 1; // 如果第二步执行了两次，就结束游戏
             if (operateObj.allRoundCount >= 2) {
                 gameOver();
             }
             changeText(200);
             break
         case 3:
-            changeText(area.vague.end);
+            changeText(area.vague.end); // 如果是第三步，改变文字为模糊的最小值
             break
-        case 4:
-            if (area.blind.end <= 12) {
+        case 4: 
+            // 如果是第四步
+            if (area.blind.end <= 12) { // 如果显示的字号小到 12 号，就跳到第 2 步
                 gotoStep(2);
             } else {
-                changeText(area.blind.end);
+                changeText(area.blind.end); // 否则就改变文字为 blind 的最小值
             }
             break
         default:
@@ -286,6 +309,7 @@ function gotoStep(step) {
     operateObj.stepRoundCount = 0;
 }
 
+// 完成了一个完整流程
 function isFullStepRound() {
     return operateObj.stepRoundCount >= 2
 }
@@ -335,39 +359,43 @@ function gameOver() {
     }, 1000);
 }
 
+// 计算下一步的文字大小
 function nextFontSize() {
     switch (operateObj.textChange) {
         case "DOWN":
-            operateObj.currentFontSize -= 2;
+            operateObj.currentFontSize -= 2; // 减少 2 个字号
             break
         case "UP":
-            operateObj.currentFontSize += 2;
+            operateObj.currentFontSize += 2; // 增大 2 个字号
             break
     }
 
     changeText();
 }
 
+// 改变文字，传入参数为文字大小
 function changeText(fontSize) {
     let text;
-    if (operateObj.step >= 4) {
+    if (operateObj.step >= 4) { // 如果是第 4 步，或者以后，则从字母中随机挑选文字
         text = randomByArrays([...CHAR_ARR]);
     } else {
-        text = randomByArrays([...CHINESE_ARR, ...CHAR_ARR, ...NUM_ARR]);
+        text = randomByArrays([...CHINESE_ARR, ...CHAR_ARR, ...NUM_ARR]); // 否则从中文、字母、数字中随机挑选文字
     }
     $('.font-txt').text(text);
     changeTextFontSize(fontSize);
-    changeDirection(1);
+    changeDirection(1); // 缩放比例为 100%
 }
 
+// 改变文字大小
 function changeTextFontSize(fontSize) {
     fontSize = fontSize || operateObj.currentFontSize;
     operateObj.currentFontSize = fontSize;
     $('.font-txt').css('fontSize', `${fontSize}px`);
 }
 
+// 改变文字方向，参数为缩放比例， 1 表示 100%
 function changeDirection(scale) {
-    currentDirection = randomByArrays([1, 2, 3, 4]);
+    currentDirection = randomByArrays([1, 2, 3, 4]); // 四个方向随机选择一个，1: 90度，2: 180度，3: 270度，4: 不动
     $('.font-txt').css({
         transform: `rotate(${currentDirection * 90}deg) scale(${scale})`
     });
